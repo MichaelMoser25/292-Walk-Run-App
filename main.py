@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+
 from sklearn.pipeline import make_pipeline
 import matplotlib
 from sklearn.linear_model import LogisticRegression
@@ -72,15 +72,18 @@ def home():
 
 
 def classify_activity(data):
-    walking_threshold = 9.8
+    walking_threshold = 5
     running_threshold = 15.0
+
+    jumping_threshold = 5
 
     data['Magnitude'] = np.sqrt(data['Acceleration x (m/s^2)'] ** 2 + data['Acceleration y (m/s^2)'] ** 2 + data['Acceleration z (m/s^2)'] ** 2)
 
     # Classify activity for the entire data
     data['Activity'] = 'Unknown'
-    data.loc[data['Magnitude'] <= walking_threshold, 'Activity'] = 'Walking'
-    data.loc[data['Magnitude'] >= running_threshold, 'Activity'] = 'Running'
+    # data.loc[data['Magnitude'] <= walking_threshold, 'Activity'] = 'Walking'
+    # data.loc[data['Magnitude'] >= running_threshold, 'Activity'] = 'Running'
+    data.loc[data['Magnitude'] >= jumping_threshold, 'Activity'] = 'Jumping'
 
     return data
 def render_plot(filename):
@@ -178,7 +181,7 @@ with open('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/Data.csv'
     # Assuming your CSV file contains columns like 'Acceleration x', 'Acceleration y', 'Acceleration z'
     # You may need to adjust these thresholds based on your data and experimentation
     walking_threshold = 9.8  # For example, if the magnitude of acceleration is less than 9.8 m/s^2, consider it as walking
-    running_threshold = 15.0  # For example, if the magnitude of acceleration is greater than 15.0 m/s^2, consider it as running
+    running_threshold = 9  # For example, if the magnitude of acceleration is greater than 15.0 m/s^2, consider it as running
 
     # Calculate the magnitude of acceleration
     # Assuming your CSV file has columns named 'X', 'Y', and 'Z' instead of 'Acceleration x', 'Acceleration y', and 'Acceleration z'
@@ -187,7 +190,7 @@ with open('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/Data.csv'
     # Classify each data point as walking or running based on thresholds
     df['Activity'] = 'Unknown'
     df.loc[df['Magnitude'] <= walking_threshold, 'Activity'] = 'Walking'
-    df.loc[df['Magnitude'] >= running_threshold, 'Activity'] = 'Running'
+    df.loc[df['Magnitude'] >= running_threshold, 'Activity'] = 'Jumping'
 
     # Display the classification result
     print(df.columns)
