@@ -1,20 +1,30 @@
 import matplotlib.pyplot as plt
+from sklearn.pipeline import make_pipeline
 import matplotlib
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, recall_score, confusion_matrix, ConfusionMatrixDisplay, roc_curve, \
+    RocCurveDisplay
+
 matplotlib.use('Agg')
 
-import pandas as pd
-import numpy as np
-
-from statsmodels.sandbox.regression.sympy_diff import df
 from wtforms import FileField, SubmitField
 from werkzeug.utils import secure_filename
 import os
+
 ## Validate form import
 from wtforms.validators import InputRequired
+import io
+
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-import io
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, recall_score, ConfusionMatrixDisplay, confusion_matrix, roc_curve, \
+    RocCurveDisplay
+from sklearn.pipeline import make_pipeline
+from sklearn.linear_model import LogisticRegression
+
+
 
 from flask import Flask, render_template, send_file
 from flask_wtf import FlaskForm
@@ -37,94 +47,77 @@ class UploadFileForm(FlaskForm):
     file = FileField("File", validators=[InputRequired()])
     submit = SubmitField("Upload File")
 
+class Confusion(FlaskForm):
+    file = FileField("File", validators=[InputRequired()])
+    submit = SubmitField("Confusion Matrix")
+
 ## Create a home rout
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/home', methods=['GET', 'POST'])
 def home():
     form = UploadFileForm()
+    conf = Confusion()
     if form.validate_on_submit():
         file = form.file.data
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         return render_plot(filename)
+    elif conf.validate_on_submit():
+        file = form.file.data
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        return render_confusion(filename)
+
     return render_template('index.html', form=form)
 
 
-def render_plot(filename):
-    dataset = pd.read_csv("/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/walkrun.csv")
-    data = dataset.iloc[:, :]
-    data = pd.DataFrame(data)
+def classify_activity(data):
+    walking_threshold = 9.8
+    running_threshold = 15.0
 
-    # Sample for length of data file
-    n_sample = len(data)
+    data['Magnitude'] = np.sqrt(data['Acceleration x (m/s^2)'] ** 2 + data['Acceleration y (m/s^2)'] ** 2 + data['Acceleration z (m/s^2)'] ** 2)
+
+    # Classify activity for the entire data
+    data['Activity'] = 'Unknown'
+    data.loc[data['Magnitude'] <= walking_threshold, 'Activity'] = 'Walking'
+    data.loc[data['Magnitude'] >= running_threshold, 'Activity'] = 'Running'
+
+    return data
+def render_plot(filename):
+    df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    df = classify_activity(df)
+    n_sample = len(df)
     x_input = np.arange(n_sample)
 
-    # Apply rolling window filters
-    sma_5 = data[['Acceleration x (m/s^2)', 'Acceleration y (m/s^2)', 'Acceleration z (m/s^2)',
-                  'Absolute acceleration (m/s^2)']].rolling(5).mean()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    ax.plot(x_input, df['Magnitude'], label='Magnitude')
+    ax.set_xlabel('Sample')
+    ax.set_ylabel('Magnitude')
 
-    sma_31 = data[['Acceleration x (m/s^2)', 'Acceleration y (m/s^2)', 'Acceleration z (m/s^2)',
-                   'Absolute acceleration (m/s^2)']].rolling(31).mean()
-
-    sma_51 = data[['Acceleration x (m/s^2)', 'Acceleration y (m/s^2)', 'Acceleration z (m/s^2)',
-                   'Absolute acceleration (m/s^2)']].rolling(51).mean()
-
-    # Plot original data along with the SMAs for each axis
-    fig, ax = plt.subplots(4, 1, figsize=(10, 10))
-
-    # Axis titles (index 0 = x accel , index 1 = y accel, index 2 = z accel, index 3 = abs accel)
-    axis_titles = ['Acceleration x (m/s^2)', 'Acceleration y (m/s^2)', 'Acceleration z (m/s^2)',
-                   'Absolute acceleration (m/s^2)']
-
-    # Plot for x-axis
-    ax[0].plot(x_input, data['Acceleration x (m/s^2)'][:n_sample], label='Original', linewidth=2)
-    ax[0].plot(x_input, sma_5['Acceleration x (m/s^2)'][:n_sample], label='SMA 5', linewidth=2)
-    ax[0].plot(x_input, sma_31['Acceleration x (m/s^2)'][:n_sample], label='SMA 31', linewidth=2)
-    ax[0].plot(x_input, sma_51['Acceleration x (m/s^2)'][:n_sample], label='SMA 51', linewidth=2)
-    ax[0].legend()
-    ax[0].set_title(axis_titles[0])
-    ax[0].set_xlabel('Sample')
-    ax[0].set_ylabel('Acceleration')
-
-    # Plot for y-axis
-    ax[1].plot(x_input, data['Acceleration y (m/s^2)'][:n_sample], label='Original', linewidth=2)
-    ax[1].plot(x_input, sma_5['Acceleration y (m/s^2)'][:n_sample], label='SMA 5', linewidth=2)
-    ax[1].plot(x_input, sma_31['Acceleration y (m/s^2)'][:n_sample], label='SMA 31', linewidth=2)
-    ax[1].plot(x_input, sma_51['Acceleration y (m/s^2)'][:n_sample], label='SMA 51', linewidth=2)
-    ax[1].legend()
-    ax[1].set_title(axis_titles[1])
-    ax[1].set_xlabel('Sample')
-    ax[1].set_ylabel('Acceleration')
-
-    # Plot for z-axis
-    ax[2].plot(x_input, data['Acceleration z (m/s^2)'][:n_sample], label='Original', linewidth=2)
-    ax[2].plot(x_input, sma_5['Acceleration z (m/s^2)'][:n_sample], label='SMA 5', linewidth=2)
-    ax[2].plot(x_input, sma_31['Acceleration z (m/s^2)'][:n_sample], label='SMA 31', linewidth=2)
-    ax[2].plot(x_input, sma_51['Acceleration z (m/s^2)'][:n_sample], label='SMA 51', linewidth=2)
-    ax[2].legend()
-    ax[2].set_title(axis_titles[2])
-    ax[2].set_xlabel('Sample')
-    ax[2].set_ylabel('Acceleration')
-
-    # Plot for abs-axis
-    ax[3].plot(x_input, data['Absolute acceleration (m/s^2)'][:n_sample], label='Original', linewidth=2)
-    ax[3].plot(x_input, sma_5['Absolute acceleration (m/s^2)'][:n_sample], label='SMA 5', linewidth=2)
-    ax[3].plot(x_input, sma_31['Absolute acceleration (m/s^2)'][:n_sample], label='SMA 31', linewidth=2)
-    ax[3].plot(x_input, sma_51['Absolute acceleration (m/s^2)'][:n_sample], label='SMA 51', linewidth=2)
-    ax[3].legend()
-    ax[3].set_title(axis_titles[3])
-    ax[3].set_xlabel('Sample')
-    ax[3].set_ylabel('Acceleration')
-
-    plt.tight_layout()  # Used to decompress the three axis graphs from each other (otherwise interference occurs)
+    # Display the classified activity
+    activity = df['Activity'].iloc[0]  # Assuming the activity classification is the same for the entire dataset
+    ax.text(0.05, 0.95, f'Activity: {activity}', transform=ax.transAxes, fontsize=12,
+            verticalalignment='top')
 
     img_buffer = io.BytesIO()
-    canvas = FigureCanvas(fig)
-    canvas.print_png(img_buffer)
+    plt.savefig(img_buffer, format='png')
     img_buffer.seek(0)
-
-    # Clear the plot to prevent it from being displayed again
     plt.close(fig)
+
+    return send_file(img_buffer, mimetype='image/png')
+    # return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename), mimetype='image/png')
+
+def render_confusion(filename):
+    df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    df = classify_activity(df)
+    cm = confusion_matrix(y_test, y_pred)
+    cm_display = ConfusionMatrixDisplay(cm)
+    cm_display.plot()
+    plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], 'confusion_matrix.png'))
+    img_buffer = io.BytesIO()
+    plt.savefig(img_buffer, format='png')
+    img_buffer.seek(0)
+    plt.close()
 
     return send_file(img_buffer, mimetype='image/png')
 
@@ -180,7 +173,7 @@ with open('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/Data.csv'
             csv_writer.writerow(row)
 
     # Load the CSV file
-    df = pd.read_csv('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/walkrun.csv')
+    df = pd.read_csv('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/jump_michael.csv')
 
     # Assuming your CSV file contains columns like 'Acceleration x', 'Acceleration y', 'Acceleration z'
     # You may need to adjust these thresholds based on your data and experimentation
@@ -201,8 +194,49 @@ with open('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/Data.csv'
     print(df.head())
 
 
+    data = df.iloc[:, 1:-1]
+    labels = df.iloc[:, -1]
+
+    # Assign 10% of the data to test the set
+    x_train, x_test, y_train, y_test = \
+        train_test_split(data, labels, test_size=0.1, shuffle=True, random_state=0)
+
+    # Define a standard scaler to normalize inputs
+    scaler = StandardScaler()
+
+    # Define classifier and the pipline
+    l_reg = LogisticRegression(max_iter=10000)
+    clf = make_pipeline(StandardScaler(), l_reg)
+
+    #training
+    clf.fit(x_train, y_train)
+
+    # obtain predictions and probabilities
+    y_pred = clf.predict(x_test)
+    y_clf_prob = clf.predict_proba(x_test)
+
+    # Calculate the accuracy of the model
+    accuracy = accuracy_score(y_test, y_pred)
+    print("Accuracy:", accuracy)
+
+    # Calculate the recall of the model
+    recall = recall_score(y_test, y_pred, average='weighted')
+    print("Recall:", recall)
+
+    # Plot confusion matrix
+    cm = confusion_matrix(y_test, y_pred)
+    cm_display = ConfusionMatrixDisplay(cm)
+    cm_display.plot()
+    plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], 'confusion_matrix.png'))
+    plt.close()
+
+    # Plot ROC curve
+    fpr, tpr, _ = roc_curve(y_test, y_clf_prob[:, 1], pos_label=clf.classes_[1])
+    roc_display = RocCurveDisplay(fpr=fpr, tpr=tpr)
+    roc_display.plot()
+    plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], 'roc_curve.png'))
+    plt.close()
 
 
 if __name__ == '__main__':
     app.run(debug=True)
-
