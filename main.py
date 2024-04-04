@@ -1,8 +1,13 @@
+from sklearn.decomposition import PCA
+from sklearn.inspection import DecisionBoundaryDisplay
 from sklearn.pipeline import make_pipeline
 import matplotlib
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, recall_score, confusion_matrix, ConfusionMatrixDisplay, roc_curve, \
     RocCurveDisplay
+
+from sklearn.inspection import DecisionBoundaryDisplay
+from sklearn.decomposition import PCA
 
 matplotlib.use('Agg')
 
@@ -20,7 +25,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, recall_score, ConfusionMatrixDisplay, confusion_matrix, roc_curve, \
     RocCurveDisplay
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.linear_model import LogisticRegression
 
 # Flask imports
@@ -192,9 +197,8 @@ ax.set_xlabel('Data Point #')
 ax.set_ylabel('Amplitude')
 
 # Store the plot in Static/file ---------------------------------------------------- Add file name
-plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], '----------------.png'))
-plt.show()
-print(sma21_data)
+# plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], '----------------.png'))
+# print(sma21_data)
 
 # Feature Extraction
 extracted_features = []
@@ -220,7 +224,7 @@ for i, features_df in enumerate(extracted_features):
     pd.set_option('display.max_columns', None)
     print(f"Features for Window {i + 1}:\n", features_df)
     print("\n")
-    
+
 # Build form
 class UploadFileForm(FlaskForm):
     file = FileField("File", validators=[InputRequired()])
@@ -348,57 +352,6 @@ def render_confusion(filename):
 
     return send_file(img_buffer, mimetype='image/png')
 
-
-# # Read csv file
-# with open('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/Data.csv', "r", newline='') as csvfile:
-#     # Create reader object
-#     csv_reader = csv.reader(csvfile)
-#
-#     # Convert CSV data to a list of lists
-#     dataset1 = list(csv_reader)
-#
-#
-#     # Write Uploaded data from csv file into hdf5
-#     with h5py.File('/Users/michaelmoser/ELEC292_Lab1/pythonProject/dataset.h5', 'w') as hdf:
-#         G1 = hdf.create_group('/Member1')
-#         G1.create_dataset('dataset1', data=dataset1)
-#
-#         G2 = hdf.create_group('/dataset/Train')
-#         G2.create_dataset('dataset1', data=dataset1)
-#
-#         G3 = hdf.create_group('/dataset/Test')
-#         G3.create_dataset('dataset1', data=dataset1)
-#
-#     # Read from hdf5 file
-#     with h5py.File('/Users/michaelmoser/ELEC292_Lab1/pythonProject/dataset.h5', 'r') as hdf:
-#         dataset1 = hdf.get('/Member1/dataset1')[:]
-#         print(type(dataset1))
-#         my_array = np.array(dataset1)
-#         print(type(my_array))
-#
-#
-#     # Access dataset1
-#     with h5py.File('/Users/michaelmoser/ELEC292_Lab1/pythonProject/dataset.h5', 'r') as hdf:
-#         items = list(hdf.items())
-#         print(items)
-#
-#         # Print Member 1 info
-#         G1 = hdf.get('/Member1')
-#         print(list(G1.items()))
-#
-#         d1 = G1.get('dataset1')
-#         d1 = np.array(d1)
-#         print(d1.shape) #(1688,5)
-#
-#     # Write csv file
-#     with open('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/time.csv', 'w', newline='') as csvfile:
-#         # Create csv writer object
-#         csv_writer = csv.writer(csvfile)
-#
-#         # Write into the csv file
-#         for row in dataset1:
-#             csv_writer.writerow(row)
-
 # Load the CSV file
 df = pd.read_csv('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/walk_michael.csv')
 
@@ -462,10 +415,83 @@ roc_display.plot()
 plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], 'roc_curve.png'))
 plt.close()
 
-# ----------------------
+# Training the classifier
+# df = pd.read_csv('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/concatenated_data.csv')
+
+# Display the classification result
+# print(df.columns)
+# print(df.head())
+
+data = df.iloc[:, 1:-1]
+labels = df.iloc[:, -1]
 
 
 
+# Split the dataset into training and test sets
+X_train, X_test, Y_train, Y_test = train_test_split(data, labels, test_size=0.2, random_state=42, shuffle=True)
+
+StandardScaler()
+LogisticRegression(max_iter=10000)
+PCA(n_components=2)
+
+# Define the steps in the pipeline
+steps = [
+    ('scaler', StandardScaler()),   # Data normalization
+    ('pca', PCA(n_components=2))    # PCA
+]
+
+# Create the pipeline
+pca_pipe = Pipeline(steps)
+
+# Apply the pipeline over X_train
+X_train_pca = pca_pipe.fit_transform(x_train)
+
+# Apply the same pipeline over X_test
+X_test_pca = pca_pipe.transform(x_test)
+
+# Define the logistic regression classifier
+logistic_clf = LogisticRegression()
+
+# Create a pipeline with logistic regression
+clf = Pipeline([
+    ('logistic', logistic_clf)
+])
+
+# Now the clf can be used for fitting and predicting
+
+# Train clf with X_train_pca and y_train
+clf.fit(X_train_pca, y_train)
+
+# Obtain predictions for X_test_pca
+y_pred_pca = clf.predict(X_test_pca)
+
+# Create the decision boundary display using DecisionBoundaryDisplay()
+disp = DecisionBoundaryDisplay.from_estimator(
+    clf, X_train_pca, response_method="predict",
+    xlabel='X1', ylabel='X2',
+    alpha=0.5
+)
+
+# Map categorical labels to numeric values
+label_mapping = {'Walking': 0, 'Jumping': 1}
+y_train_numeric = y_train.map(label_mapping)
+
+# Plot the scatter plot
+disp.ax_.scatter(X_train_pca[:, 0], X_train_pca[:, 1], c=y_train_numeric)
+
+# Display model
+plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], 'training_data.png'))
+
+# Calculate accuracy score of the model using only 2 components of PCA
+accuracy = accuracy_score(y_test, y_pred_pca)
+print('Accuracy: :', accuracy)
+
+# ----------------------------------- used for testing, Empty the csv file
+# # Create an empty DataFrame
+# empty_df = pd.DataFrame()
+#
+# # Write the empty DataFrame to the concatenated file, overwriting its contents
+# empty_df.to_csv('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/concatenated_data.csv', index=False)
 
 if __name__ == '__main__':
     app.run(debug=True)
