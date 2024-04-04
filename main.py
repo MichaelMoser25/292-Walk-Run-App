@@ -353,7 +353,7 @@ def render_confusion(filename):
     return send_file(img_buffer, mimetype='image/png')
 
 # Load the CSV file
-df = pd.read_csv('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/walk_michael.csv')
+df = pd.read_csv('/Static/files/walk_michael.csv')
 
 # Setting data thresholds to determine activity
 walking_threshold = 9.1  # For example, if the magnitude of acceleration is greater than 9.1 m/s^2, the data is considered to be walking
@@ -416,7 +416,7 @@ plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], 'roc_curve.png'))
 plt.close()
 
 # Training the classifier
-# df = pd.read_csv('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/concatenated_data.csv')
+df = pd.read_csv('/Static/files/concatenated_data.csv')
 
 # Display the classification result
 # print(df.columns)
@@ -471,7 +471,6 @@ disp = DecisionBoundaryDisplay.from_estimator(
     xlabel='X1', ylabel='X2',
     alpha=0.5
 )
-
 # Map categorical labels to numeric values
 label_mapping = {'Walking': 0, 'Jumping': 1}
 y_train_numeric = y_train.map(label_mapping)
@@ -484,7 +483,7 @@ plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], 'training_data.png'))
 
 # Calculate accuracy score of the model using only 2 components of PCA
 accuracy = accuracy_score(y_test, y_pred_pca)
-print('Accuracy: :', accuracy)
+print('Accuracy after classifier: :', accuracy)
 
 # ----------------------------------- used for testing, Empty the csv file
 # # Create an empty DataFrame
