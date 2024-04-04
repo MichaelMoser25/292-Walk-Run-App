@@ -1,4 +1,3 @@
-
 from sklearn.pipeline import make_pipeline
 import matplotlib
 from sklearn.linear_model import LogisticRegression
@@ -32,9 +31,10 @@ import csv
 import h5py
 import numpy as np
 
-## Create app instance
+# Create app instance
 app = Flask(__name__)
-## Create a secret key in app in order for form to show up in template
+
+# Create a secret key in app in order for form to show up in template
 app.config['SECRET_KEY'] = 'supersecretkey'
 app.config['UPLOAD_FOLDER'] = 'static/files'
 
@@ -43,6 +43,7 @@ member1_data = pd.read_csv("/Users/michaelmoser/ELEC292_Lab1/pythonProject/Stati
 member2_data = pd.read_csv("/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/walk_michael.csv")
 
 member_data = [member1_data, member2_data]
+
 
 # This function obtains the required 5-second window segments
 def get_segments(data, column_name):
@@ -55,6 +56,19 @@ def get_segments(data, column_name):
             data_index += 1
 
     return data_windows
+
+
+def split_train_test(data_windows):
+    windows_list = list(data_windows.values())
+
+    train_windows, test_windows = train_test_split(
+        windows_list, test_size=0.1, shuffle=True, random_state=42
+    )
+
+    return {'train': train_windows, 'test': test_windows}
+
+
+member_train_test_data = {}
 
 member_data_windows = {}
 
@@ -70,18 +84,6 @@ for member_index, data in enumerate(member_data):
         'z': z_windows,
         'abs': abs_windows
     }
-
-def split_train_test(data_windows):
-
-    windows_list = list(data_windows.values())
-
-    train_windows, test_windows = train_test_split(
-        windows_list, test_size=0.1, shuffle=True, random_state=42
-    )
-
-    return {'train': train_windows, 'test': test_windows}
-
-member_train_test_data = {}
 
 for member_index, axes_data in member_data_windows.items():
     member_train_test_data[member_index] = {}
@@ -155,80 +157,17 @@ with h5py.File('test.h5', 'r') as hdf:
         testing_windows_df = pd.concat([testing_windows_df, df_testing])
         # print(testing_windows_df)
 
-# Step 4: Pre-Processing
-original_data = []
-sma5_data = []
-sma11_data = []
-sma21_data = []
-
-for window_dataframe in training_dataset_list:
-    data = window_dataframe.iloc[:, 0]
-    sma_5 = window_dataframe['Abs Accel (m/s^2)'].rolling(5).mean().dropna()
-    sma_11 = window_dataframe['Abs Accel (m/s^2)'].rolling(11).mean().dropna()
-    sma_21 = window_dataframe['Abs Accel (m/s^2)'].rolling(21).mean().dropna()
-    original_data.append(data)
-    sma5_data.append(sma_5)
-    sma11_data.append(sma_11)
-    sma21_data.append(sma_21)
-
-# Concat used for graphing, ignore_index is used because otherwise points will be mapped to others with a horizontal
-# line, Which makes the plots completely illegible
-original_data_concat = pd.concat(original_data, ignore_index=True)
-sma5_data_concat = pd.concat(sma5_data, ignore_index=True)
-sma11_data_concat = pd.concat(sma11_data, ignore_index=True)
-sma21_data_concat = pd.concat(sma21_data, ignore_index=True)
-
-x_input = np.arange(len(original_data_concat))
-
-fig, ax = plt.subplots(figsize=(10, 10))
-ax.plot(x_input, original_data_concat, linewidth=2, color='purple', label='Original')
-ax.plot(x_input[:len(sma5_data_concat)], sma5_data_concat, linewidth=2, color='blue', label='SMA 5')
-ax.plot(x_input[:len(sma11_data_concat)], sma11_data_concat, linewidth=2, color='teal', label='SMA 11')
-ax.plot(x_input[:len(sma21_data_concat)], sma21_data_concat, linewidth=2, color='magenta', label='SMA 21')
-ax.set_title("Original Data (Purple) vs SMA 5 (Blue) vs SMA 11 (Teal) vs SMA 21 (Magenta)")
-ax.set_xlabel('Data Point #')
-ax.set_ylabel('Amplitude')
-
-# Store the plot in Static/file
-plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], '----------------.png'))
-
-plt.show()
-
-print(sma21_data)
-
-# Step 5: Feature Extraction
-extracted_features = []
-for smoothed_window_df in sma21_data:
-    data = smoothed_window_df
-    features = {
-        'mean': smoothed_window_df.mean(),
-        'min': smoothed_window_df.min(),
-        'max': smoothed_window_df.max(),
-        'median': smoothed_window_df.median(),
-        'std_dev': smoothed_window_df.std(),
-        'kurtosis': smoothed_window_df.kurtosis(),
-        'variance': smoothed_window_df.var(),
-        'skewness': smoothed_window_df.skew(),
-        'sum': smoothed_window_df.sum(),
-        'range': (smoothed_window_df.max() - smoothed_window_df.min()),
-    }
-
-    features_df = pd.DataFrame([features])
-    extracted_features.append(features_df)
-
-for i, features_df in enumerate(extracted_features):
-    pd.set_option('display.max_columns', None)
-    print(f"Features for Window {i+1}:\n", features_df)
-    print("\n")
 
 # Build form
 class UploadFileForm(FlaskForm):
     file = FileField("File", validators=[InputRequired()])
     submit = SubmitField("Upload File")
 
+
 class Confusion(FlaskForm):
     file = FileField("File", validators=[InputRequired()])
     submit = SubmitField("Confusion Matrix")
+
 
 # Create a home route
 @app.route('/', methods=['GET', 'POST'])
@@ -243,18 +182,18 @@ def home():
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
         # List the CSV files which already exist
-        existing_files = [os.path.join(app.config['UPLOAD_FOLDER'], f) 
+        existing_files = [os.path.join(app.config['UPLOAD_FOLDER'], f)
                           for f in os.listdir(app.config['UPLOAD_FOLDER'])
                           if f.endswith('.csv')]
 
         # Output file path for concatenated data
         output_file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'concatenated_data.csv')
-        
+
         # Concatenate the concatenate_data.csv with the uploaded data.csv file
         concatenate_csv(file_path, existing_files, output_file_path)
-        
+
         return render_plot(filename)
-    
+
     elif conf.validate_on_submit():
         file = form.file.data
         filename = secure_filename(file.filename)
@@ -262,6 +201,7 @@ def home():
         return render_confusion(filename)
 
     return render_template('index.html', form=form)
+
 
 # Function to concatenate CSV files
 def concatenate_csv(new_file_path, existing_file_paths, output_file_path):
@@ -281,23 +221,28 @@ def concatenate_csv(new_file_path, existing_file_paths, output_file_path):
     concatenated_data.to_csv(output_file_path, index=False)
 
 
-# Route for success page
+# Route for success page for testing
 @app.route('/success')
 def success():
-    return 'CSV file uploaded and concatenated successfully!'
-def classify_activity(data):
+    return 'The CSV file was uploaded and concatenated successfully!'
+
+
+def classify_activity(classify_data):
     walking_threshold = 9.1
     running_threshold = walking_threshold
 
     # Calculate the magnitude in the x,y,z plane
-    data['Magnitude'] = np.sqrt(data['Acceleration x (m/s^2)'] ** 2 + data['Acceleration y (m/s^2)'] ** 2 + data['Acceleration z (m/s^2)'] ** 2)
+    classify_data['Magnitude'] = np.sqrt(
+        classify_data['Acceleration x (m/s^2)'] ** 2 + classify_data['Acceleration y (m/s^2)'] ** 2 + classify_data['Acceleration z (m/s^2)'] ** 2)
 
     # Classify activity for the entire data
-    data['Activity'] = 'Unknown'
-    data.loc[data['Magnitude'] >= walking_threshold, 'Activity'] = 'Walking'
-    data.loc[data['Magnitude'] <= running_threshold, 'Activity'] = 'Jumping'
+    classify_data['Activity'] = 'Unknown'
+    classify_data.loc[classify_data['Magnitude'] >= walking_threshold, 'Activity'] = 'Walking'
+    classify_data.loc[classify_data['Magnitude'] <= running_threshold, 'Activity'] = 'Jumping'
 
-    return data
+    return classify_data
+
+
 def render_plot(filename):
     df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'], filename))
     df = classify_activity(df)
@@ -324,6 +269,7 @@ def render_plot(filename):
         return send_file(img_buffer, mimetype='image/png')
     else:
         return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename), mimetype='image/png')
+
 
 def render_confusion(filename):
     df = pd.read_csv(os.path.join(app.config['UPLOAD_FOLDER'], filename))
@@ -395,10 +341,11 @@ df = pd.read_csv('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/wa
 
 # Setting data thresholds to determine activity
 walking_threshold = 9.1  # For example, if the magnitude of acceleration is greater than 9.1 m/s^2, the data is considered to be walking
-running_threshold = walking_threshold # For example, if the magnitude of acceleration is less than walking_threshold, consider it as running
+running_threshold = walking_threshold  # For example, if the magnitude of acceleration is less than walking_threshold, consider it as running
 
 # Calculate the magnitude of acceleration
-df['Magnitude'] = (df['Acceleration x (m/s^2)'] ** 2 + df['Acceleration y (m/s^2)'] ** 2 + df['Acceleration z (m/s^2)'] ** 2) ** 0.5
+df['Magnitude'] = (df['Acceleration x (m/s^2)'] ** 2 + df['Acceleration y (m/s^2)'] ** 2 + df[
+    'Acceleration z (m/s^2)'] ** 2) ** 0.5
 
 # Classify each data point as walking or running based on thresholds
 df['Activity'] = 'Unknown'
@@ -423,7 +370,7 @@ scaler = StandardScaler()
 l_reg = LogisticRegression(max_iter=10000)
 clf = make_pipeline(StandardScaler(), l_reg)
 
-#training
+# training
 clf.fit(x_train, y_train)
 
 # obtain predictions and probabilities
@@ -451,6 +398,73 @@ roc_display = RocCurveDisplay(fpr=fpr, tpr=tpr)
 roc_display.plot()
 plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], 'roc_curve.png'))
 plt.close()
+
+# ----------------------
+
+
+# Pre-Processing
+original_data = []
+sma5_data = []
+sma11_data = []
+sma21_data = []
+
+for window_dataframe in training_dataset_list:
+    data = window_dataframe.iloc[:, 0]
+    sma_5 = window_dataframe['Abs Accel (m/s^2)'].rolling(5).mean().dropna()
+    sma_11 = window_dataframe['Abs Accel (m/s^2)'].rolling(11).mean().dropna()
+    sma_21 = window_dataframe['Abs Accel (m/s^2)'].rolling(21).mean().dropna()
+    original_data.append(data)
+    sma5_data.append(sma_5)
+    sma11_data.append(sma_11)
+    sma21_data.append(sma_21)
+
+# Concat used for graphing, ignore_index is used because otherwise points will be mapped to others with a horizontal
+# line, Which makes the plots completely illegible
+original_data_concat = pd.concat(original_data, ignore_index=True)
+sma5_data_concat = pd.concat(sma5_data, ignore_index=True)
+sma11_data_concat = pd.concat(sma11_data, ignore_index=True)
+sma21_data_concat = pd.concat(sma21_data, ignore_index=True)
+
+x_input = np.arange(len(original_data_concat))
+
+fig, ax = plt.subplots(figsize=(10, 10))
+ax.plot(x_input, original_data_concat, linewidth=2, color='purple', label='Original')
+ax.plot(x_input[:len(sma5_data_concat)], sma5_data_concat, linewidth=2, color='blue', label='SMA 5')
+ax.plot(x_input[:len(sma11_data_concat)], sma11_data_concat, linewidth=2, color='teal', label='SMA 11')
+ax.plot(x_input[:len(sma21_data_concat)], sma21_data_concat, linewidth=2, color='magenta', label='SMA 21')
+ax.set_title("Original Data (Purple) vs SMA 5 (Blue) vs SMA 11 (Teal) vs SMA 21 (Magenta)")
+ax.set_xlabel('Data Point #')
+ax.set_ylabel('Amplitude')
+
+# Store the plot in Static/file ---------------------------------------------------- Add file name
+plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], '----------------.png'))
+plt.show()
+print(sma21_data)
+
+# Feature Extraction
+extracted_features = []
+for smoothed_window_df in sma21_data:
+    data = smoothed_window_df
+    features = {
+        'mean': smoothed_window_df.mean(),
+        'min': smoothed_window_df.min(),
+        'max': smoothed_window_df.max(),
+        'median': smoothed_window_df.median(),
+        'std_dev': smoothed_window_df.std(),
+        'kurtosis': smoothed_window_df.kurtosis(),
+        'variance': smoothed_window_df.var(),
+        'skewness': smoothed_window_df.skew(),
+        'sum': smoothed_window_df.sum(),
+        'range': (smoothed_window_df.max() - smoothed_window_df.min()),
+    }
+
+    features_df = pd.DataFrame([features])
+    extracted_features.append(features_df)
+
+for i, features_df in enumerate(extracted_features):
+    pd.set_option('display.max_columns', None)
+    print(f"Features for Window {i + 1}:\n", features_df)
+    print("\n")
 
 if __name__ == '__main__':
     app.run(debug=True)
