@@ -157,7 +157,70 @@ with h5py.File('test.h5', 'r') as hdf:
         testing_windows_df = pd.concat([testing_windows_df, df_testing])
         # print(testing_windows_df)
 
+# Pre-Processing
+original_data = []
+sma5_data = []
+sma11_data = []
+sma21_data = []
 
+for window_dataframe in training_dataset_list:
+    data = window_dataframe.iloc[:, 0]
+    sma_5 = window_dataframe['Abs Accel (m/s^2)'].rolling(5).mean().dropna()
+    sma_11 = window_dataframe['Abs Accel (m/s^2)'].rolling(11).mean().dropna()
+    sma_21 = window_dataframe['Abs Accel (m/s^2)'].rolling(21).mean().dropna()
+    original_data.append(data)
+    sma5_data.append(sma_5)
+    sma11_data.append(sma_11)
+    sma21_data.append(sma_21)
+
+# Concat used for graphing, ignore_index is used because otherwise points will be mapped to others with a horizontal
+# line, Which makes the plots completely illegible
+original_data_concat = pd.concat(original_data, ignore_index=True)
+sma5_data_concat = pd.concat(sma5_data, ignore_index=True)
+sma11_data_concat = pd.concat(sma11_data, ignore_index=True)
+sma21_data_concat = pd.concat(sma21_data, ignore_index=True)
+
+x_input = np.arange(len(original_data_concat))
+
+fig, ax = plt.subplots(figsize=(10, 10))
+ax.plot(x_input, original_data_concat, linewidth=2, color='purple', label='Original')
+ax.plot(x_input[:len(sma5_data_concat)], sma5_data_concat, linewidth=2, color='blue', label='SMA 5')
+ax.plot(x_input[:len(sma11_data_concat)], sma11_data_concat, linewidth=2, color='teal', label='SMA 11')
+ax.plot(x_input[:len(sma21_data_concat)], sma21_data_concat, linewidth=2, color='magenta', label='SMA 21')
+ax.set_title("Original Data (Purple) vs SMA 5 (Blue) vs SMA 11 (Teal) vs SMA 21 (Magenta)")
+ax.set_xlabel('Data Point #')
+ax.set_ylabel('Amplitude')
+
+# Store the plot in Static/file ---------------------------------------------------- Add file name
+plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], '----------------.png'))
+plt.show()
+print(sma21_data)
+
+# Feature Extraction
+extracted_features = []
+for smoothed_window_df in sma21_data:
+    data = smoothed_window_df
+    features = {
+        'mean': smoothed_window_df.mean(),
+        'min': smoothed_window_df.min(),
+        'max': smoothed_window_df.max(),
+        'median': smoothed_window_df.median(),
+        'std_dev': smoothed_window_df.std(),
+        'kurtosis': smoothed_window_df.kurtosis(),
+        'variance': smoothed_window_df.var(),
+        'skewness': smoothed_window_df.skew(),
+        'sum': smoothed_window_df.sum(),
+        'range': (smoothed_window_df.max() - smoothed_window_df.min()),
+    }
+
+    features_df = pd.DataFrame([features])
+    extracted_features.append(features_df)
+
+for i, features_df in enumerate(extracted_features):
+    pd.set_option('display.max_columns', None)
+    print(f"Features for Window {i + 1}:\n", features_df)
+    print("\n")
+    
 # Build form
 class UploadFileForm(FlaskForm):
     file = FileField("File", validators=[InputRequired()])
@@ -402,69 +465,7 @@ plt.close()
 # ----------------------
 
 
-# Pre-Processing
-original_data = []
-sma5_data = []
-sma11_data = []
-sma21_data = []
 
-for window_dataframe in training_dataset_list:
-    data = window_dataframe.iloc[:, 0]
-    sma_5 = window_dataframe['Abs Accel (m/s^2)'].rolling(5).mean().dropna()
-    sma_11 = window_dataframe['Abs Accel (m/s^2)'].rolling(11).mean().dropna()
-    sma_21 = window_dataframe['Abs Accel (m/s^2)'].rolling(21).mean().dropna()
-    original_data.append(data)
-    sma5_data.append(sma_5)
-    sma11_data.append(sma_11)
-    sma21_data.append(sma_21)
-
-# Concat used for graphing, ignore_index is used because otherwise points will be mapped to others with a horizontal
-# line, Which makes the plots completely illegible
-original_data_concat = pd.concat(original_data, ignore_index=True)
-sma5_data_concat = pd.concat(sma5_data, ignore_index=True)
-sma11_data_concat = pd.concat(sma11_data, ignore_index=True)
-sma21_data_concat = pd.concat(sma21_data, ignore_index=True)
-
-x_input = np.arange(len(original_data_concat))
-
-fig, ax = plt.subplots(figsize=(10, 10))
-ax.plot(x_input, original_data_concat, linewidth=2, color='purple', label='Original')
-ax.plot(x_input[:len(sma5_data_concat)], sma5_data_concat, linewidth=2, color='blue', label='SMA 5')
-ax.plot(x_input[:len(sma11_data_concat)], sma11_data_concat, linewidth=2, color='teal', label='SMA 11')
-ax.plot(x_input[:len(sma21_data_concat)], sma21_data_concat, linewidth=2, color='magenta', label='SMA 21')
-ax.set_title("Original Data (Purple) vs SMA 5 (Blue) vs SMA 11 (Teal) vs SMA 21 (Magenta)")
-ax.set_xlabel('Data Point #')
-ax.set_ylabel('Amplitude')
-
-# Store the plot in Static/file ---------------------------------------------------- Add file name
-plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], '----------------.png'))
-plt.show()
-print(sma21_data)
-
-# Feature Extraction
-extracted_features = []
-for smoothed_window_df in sma21_data:
-    data = smoothed_window_df
-    features = {
-        'mean': smoothed_window_df.mean(),
-        'min': smoothed_window_df.min(),
-        'max': smoothed_window_df.max(),
-        'median': smoothed_window_df.median(),
-        'std_dev': smoothed_window_df.std(),
-        'kurtosis': smoothed_window_df.kurtosis(),
-        'variance': smoothed_window_df.var(),
-        'skewness': smoothed_window_df.skew(),
-        'sum': smoothed_window_df.sum(),
-        'range': (smoothed_window_df.max() - smoothed_window_df.min()),
-    }
-
-    features_df = pd.DataFrame([features])
-    extracted_features.append(features_df)
-
-for i, features_df in enumerate(extracted_features):
-    pd.set_option('display.max_columns', None)
-    print(f"Features for Window {i + 1}:\n", features_df)
-    print("\n")
 
 if __name__ == '__main__':
     app.run(debug=True)
