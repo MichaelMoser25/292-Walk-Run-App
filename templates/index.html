@@ -47,8 +47,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>Walking or Running</h1>
-        <h4>Upload a .csv file</h4>
+        <h1>Walking or Jumping</h1>
+        <h4>Please Upload a .csv file</h4>
 
         <form method="POST" enctype="multipart/form-data">
             {{form.hidden_tag()}}
@@ -57,8 +57,7 @@
         </form>
 
         <button onclick="window.location.href='/page1'">Confusion matrix</button>
-        <button onclick="window.location.href='/page2'">Page 2</button>
-        <button onclick="window.location.href='/page3'">Page 3</button>
+        <button onclick="window.location.href='/page2'">ROC curve</button>
 
     </div>
 </body>
