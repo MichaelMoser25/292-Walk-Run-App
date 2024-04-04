@@ -222,8 +222,8 @@ for smoothed_window_df in sma21_data:
 
 for i, features_df in enumerate(extracted_features):
     pd.set_option('display.max_columns', None)
-    print(f"Features for Window {i + 1}:\n", features_df)
-    print("\n")
+    # print(f"Features for Window {i + 1}:\n", features_df)
+    # print("\n")
 
 # Build form
 class UploadFileForm(FlaskForm):
@@ -353,7 +353,7 @@ def render_confusion(filename):
     return send_file(img_buffer, mimetype='image/png')
 
 # Load the CSV file
-df = pd.read_csv('/Static/files/walk_michael.csv')
+df = pd.read_csv('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/walk_michael.csv')
 
 # Setting data thresholds to determine activity
 walking_threshold = 9.1  # For example, if the magnitude of acceleration is greater than 9.1 m/s^2, the data is considered to be walking
@@ -369,8 +369,8 @@ df.loc[df['Magnitude'] >= walking_threshold, 'Activity'] = 'Walking'
 df.loc[df['Magnitude'] <= running_threshold, 'Activity'] = 'Jumping'
 
 # Display the classification result
-print(df.columns)
-print(df.head())
+# print(df.columns)
+# print(df.head())
 
 data = df.iloc[:, 1:-1]
 labels = df.iloc[:, -1]
@@ -395,11 +395,11 @@ y_clf_prob = clf.predict_proba(x_test)
 
 # Calculate the accuracy of the model
 accuracy = accuracy_score(y_test, y_pred)
-print("Accuracy:", accuracy)
+# print("Accuracy:", accuracy)
 
 # Calculate the recall of the model
 recall = recall_score(y_test, y_pred, average='weighted')
-print("Recall:", recall)
+# print("Recall:", recall)
 
 # Plot confusion matrix
 cm = confusion_matrix(y_test, y_pred)
@@ -416,7 +416,7 @@ plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], 'roc_curve.png'))
 plt.close()
 
 # Training the classifier
-df = pd.read_csv('/Static/files/concatenated_data.csv')
+df = pd.read_csv('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/concatenated_data.csv')
 
 # Display the classification result
 # print(df.columns)
@@ -424,8 +424,6 @@ df = pd.read_csv('/Static/files/concatenated_data.csv')
 
 data = df.iloc[:, 1:-1]
 labels = df.iloc[:, -1]
-
-
 
 # Split the dataset into training and test sets
 X_train, X_test, Y_train, Y_test = train_test_split(data, labels, test_size=0.2, random_state=42, shuffle=True)
@@ -471,6 +469,7 @@ disp = DecisionBoundaryDisplay.from_estimator(
     xlabel='X1', ylabel='X2',
     alpha=0.5
 )
+
 # Map categorical labels to numeric values
 label_mapping = {'Walking': 0, 'Jumping': 1}
 y_train_numeric = y_train.map(label_mapping)
@@ -483,7 +482,7 @@ plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], 'training_data.png'))
 
 # Calculate accuracy score of the model using only 2 components of PCA
 accuracy = accuracy_score(y_test, y_pred_pca)
-print('Accuracy after classifier: :', accuracy)
+# print('Accuracy after classifier: :', accuracy)
 
 # ----------------------------------- used for testing, Empty the csv file
 # # Create an empty DataFrame
