@@ -416,7 +416,14 @@ plt.savefig(os.path.join(app.config['UPLOAD_FOLDER'], 'roc_curve.png'))
 plt.close()
 
 # Training the classifier
-df = pd.read_csv('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/concatenated_data.csv')
+# convert sma21_data_concat to CSV
+output_file_path = 'sma21_data_concat.csv'
+
+# Save the DataFrame as a CSV file
+sma21_data_concat.to_csv(output_file_path, index=False)
+# df = pd.read_csv('/Users/michaelmoser/ELEC292_Lab1/pythonProject/Static/files/concatenated_data.csv')
+df = pd.read_csv('sma21_data_concat.csv')
+
 
 # Display the classification result
 # print(df.columns)
