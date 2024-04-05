@@ -1,4 +1,4 @@
-from sklearn.decomposition import PCA
+rom sklearn.decomposition import PCA
 from sklearn.inspection import DecisionBoundaryDisplay
 from sklearn.pipeline import make_pipeline
 import matplotlib
