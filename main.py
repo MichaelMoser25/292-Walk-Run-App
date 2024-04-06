@@ -46,15 +46,15 @@ app.config['UPLOAD_FOLDER'] = 'static/files'
 # Import jumping data for all members
 member1_jumping_data = pd.read_csv("jump_joseph.csv")
 member2_jumping_data = pd.read_csv("jump_michael.csv")
-member3_jumping_data = pd.read_csv("jump_joseph.csv")
+member3_jumping_data = pd.read_csv("jump_carl.csv")
 
 # Save jumping data to a list
 member_jumping_data = [member1_jumping_data, member2_jumping_data, member3_jumping_data]
 
 # Import walking data for all members
 member1_walking_data = pd.read_csv("walk_joseph.csv")
-member2_walking_data = pd.read_csv("walk_joseph.csv")
-member3_walking_data = pd.read_csv("walk_joseph.csv")
+member2_walking_data = pd.read_csv("walk_michael.csv")
+member3_walking_data = pd.read_csv("walk_carl.csv")
 
 # Save walking data to a list
 member_walking_data = [member1_walking_data, member2_walking_data, member3_walking_data]
@@ -106,6 +106,7 @@ for member_index, data in enumerate(member_walking_data):
         'abs': abs_windows
     }
 
+# Concatenate jumping and walking windows together
 merged_data = {**member_jumping_data_windows, **member_walking_data_windows}
 
 def split_train_test(data_windows):
@@ -170,16 +171,16 @@ with h5py.File('accelerometer_data.h5', 'w') as hdf:
 
     # Create 3 different groups for each team member with both the original "Jumping" and "Walking" datasets
     member1 = hdf.create_group('Joseph')
-    member1.create_dataset('Walking Data', data=member1_jumping_data)
+    member1.create_dataset('Walking Data', data=member1_walking_data)
     member1.create_dataset('Jumping Data', data=member1_jumping_data)
 
     member2 = hdf.create_group('Michael')
-    member2.create_dataset('Walking Data', data=member2_jumping_data)
+    member2.create_dataset('Walking Data', data=member2_walking_data)
     member2.create_dataset('Jumping Data', data=member2_jumping_data)
 
     member3 = hdf.create_group('Carl')
-    member3.create_dataset('Walking Data', data=member2_jumping_data)
-    member3.create_dataset('Jumping Data', data=member2_jumping_data)
+    member3.create_dataset('Walking Data', data=member3_walking_data)
+    member3.create_dataset('Jumping Data', data=member3_jumping_data)
 
     dataset = hdf.create_group('Dataset')
     training_data = dataset.create_group('Training')
