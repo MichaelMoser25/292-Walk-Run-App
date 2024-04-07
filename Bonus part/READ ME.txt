@@ -1,0 +1,1 @@
+To ensurethe code runs properly, place index.html in templates folder and ensure the code and msedgedriver.exe are within the same folder
