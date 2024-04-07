@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload CSV</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 40px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            color: #333;
+        }
+        h4 {
+            color: #666;
+        }
+        form {
+            margin-top: 20px;
+        }
+        input[type="file"] {
+            margin-bottom: 10px;
+        }
+        button[type="submit"], button[type="button"] {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-right: 10px;
+        }
+        button[type="submit"]:hover, button[type="button"]:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Walking or Jumping</h1>
+        <h4>Please Upload a .csv file</h4>
+
+        <form method="POST" enctype="multipart/form-data">
+            {{form.hidden_tag()}}
+            {{form.file()}}
+            {{form.submit()}}
+        </form>
+
+        <!-- Inserted code for the new button -->
+        <form method="POST" action="{{ url_for('livestream') }}">
+            <button type="submit" style="font-size: 12px; padding: 5px 10px; background-color: #f0f0f0; color: black; border: 1px solid #ccc;">Live Stream Data</button>
+        </form>
+        <br>
+        
+        
+
+        <button onclick="window.location.href='/page1'">Confusion matrix</button>
+        <button onclick="window.location.href='/page2'">ROC curve</button>
+
+    </div>
+</body>
+</html>
